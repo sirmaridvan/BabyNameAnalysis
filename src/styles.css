@@ -48,3 +48,7 @@ button.subtle:hover { background:#334155; }
 .ai-section-body p { margin:0 0 0.4rem; font-size:0.8rem; line-height:1.45; }
 .ai-section:last-child { margin-bottom:0.4rem; }
 @media (max-width:640px){ .ai-header { flex-direction:column; align-items:flex-start; } .ai-header-actions { width:100%; } }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+@media (prefers-reduced-motion: reduce){ * { animation:none !important; transition:none !important; } }
+main { flex:1; display:flex; flex-direction:column; }
