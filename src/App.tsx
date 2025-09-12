@@ -73,14 +73,14 @@ export default function App() {
   const chartData = trend ? {
     labels: trend.byYear.map(p => p.year),
     datasets: [
-      { label: `${trend.name} usage`, data: trend.byYear.map(p => p.count), tension: 0.3, fill: true, backgroundColor: 'rgba(99,102,241,0.18)', borderColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#6366f1', pointBorderWidth: 0 }
+      { label: `${trend.name} kullanım`, data: trend.byYear.map(p => p.count), tension: 0.3, fill: true, backgroundColor: 'rgba(99,102,241,0.18)', borderColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#6366f1', pointBorderWidth: 0 }
     ]
   } : undefined;
 
   const commonChartData = commonTrend ? {
     labels: commonTrend.byYear.map(p => p.year),
     datasets: [
-      { label: `${commonTrend.name} common usage`, data: commonTrend.byYear.map(p => p.count), tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.18)', borderColor: '#10b981', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#10b981', pointBorderWidth: 0 }
+      { label: `${commonTrend.name} yaygın kullanım`, data: commonTrend.byYear.map(p => p.count), tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.18)', borderColor: '#10b981', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#10b981', pointBorderWidth: 0 }
     ]
   } : undefined;
 
@@ -88,16 +88,16 @@ export default function App() {
 
   return (
     <div className="container">
-      <h1>Baby Name Trend Explorer</h1>
+      <h1>İsim Trend Analizi</h1>
       <div className="search-card">
         <form onSubmit={handleSearch}>
           <div className="field">
-            <label htmlFor="name">Name</label>
-            <input id="name" placeholder="e.g. Emma" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
+            <label htmlFor="name">İsim</label>
+            <input id="name" placeholder="örn. Mehmet" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
           </div>
-          <button type="submit" disabled={!query.name || loading}>{loading ? 'Analyzing…' : 'Analyze'}</button>
+          <button type="submit" disabled={!query.name || loading}>{loading ? 'Analiz Ediliyor…' : 'Analiz Et'}</button>
         </form>
-        {!dataReady && !error && <div className="loading" style={{marginTop:'0.75rem', fontSize:'0.8rem'}}>Loading dataset…</div>}
+        {!dataReady && !error && <div className="loading" style={{marginTop:'0.75rem', fontSize:'0.8rem'}}>Veri yükleniyor…</div>}
         {error && <div className="alert" style={{marginTop:'0.75rem'}}>{error}</div>}
       </div>
       <div className="results">
@@ -117,14 +117,14 @@ export default function App() {
         )}
         {searched && trend && (
           <div className="card">
-            <h2 style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>{trend.name} Over Time</h2>
+            <h2 style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>{trend.name} Yıllara Göre</h2>
             <div className="summary-grid">
-              <div className="summary-item"><span>Total</span><strong>{trend.total.toLocaleString()}</strong></div>
-              <div className="summary-item"><span>Years Tracked</span><strong>{trend.byYear.length}</strong></div>
-              {trend.earliestYear && <div className="summary-item"><span>Earliest Year</span><strong>{trend.earliestYear}</strong></div>}
-              {trend.latestYear && <div className="summary-item"><span>Latest Year</span><strong>{trend.latestYear}</strong></div>}
-              {trend.averagePerYear && <div className="summary-item"><span>Avg / Year</span><strong>{Math.round(trend.averagePerYear).toLocaleString()}</strong></div>}
-              {trend.peak && <div className="summary-item"><span>Peak Year</span><strong>{trend.peak.year} ({trend.peak.count.toLocaleString()})</strong></div>}
+              <div className="summary-item"><span>Toplam</span><strong>{trend.total.toLocaleString()}</strong></div>
+              <div className="summary-item"><span>Yıl Sayısı</span><strong>{trend.byYear.length}</strong></div>
+              {trend.earliestYear && <div className="summary-item"><span>İlk Yıl</span><strong>{trend.earliestYear}</strong></div>}
+              {trend.latestYear && <div className="summary-item"><span>Son Yıl</span><strong>{trend.latestYear}</strong></div>}
+              {trend.averagePerYear && <div className="summary-item"><span>Yıllık Ortalama</span><strong>{Math.round(trend.averagePerYear).toLocaleString()}</strong></div>}
+              {trend.peak && <div className="summary-item"><span>Zirve Yıl</span><strong>{trend.peak.year} ({trend.peak.count.toLocaleString()})</strong></div>}
             </div>
             <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
               {chartData && <Line data={chartData} options={chartOptions} />}
@@ -133,14 +133,14 @@ export default function App() {
         )}
         {searched && commonTrend && (
           <div className="card">
-            <h2 style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>{commonTrend.name} Common Usage</h2>
+            <h2 style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>{commonTrend.name} Yaygın Kullanım</h2>
             <div className="summary-grid">
-              <div className="summary-item"><span>Total</span><strong>{commonTrend.total.toLocaleString()}</strong></div>
-              <div className="summary-item"><span>Years Tracked</span><strong>{commonTrend.byYear.length}</strong></div>
-              {commonTrend.earliestYear && <div className="summary-item"><span>Earliest Year</span><strong>{commonTrend.earliestYear}</strong></div>}
-              {commonTrend.latestYear && <div className="summary-item"><span>Latest Year</span><strong>{commonTrend.latestYear}</strong></div>}
-              {commonTrend.averagePerYear && <div className="summary-item"><span>Avg / Year</span><strong>{Math.round(commonTrend.averagePerYear).toLocaleString()}</strong></div>}
-              {commonTrend.peak && <div className="summary-item"><span>Peak Year</span><strong>{commonTrend.peak.year} ({commonTrend.peak.count.toLocaleString()})</strong></div>}
+              <div className="summary-item"><span>Toplam</span><strong>{commonTrend.total.toLocaleString()}</strong></div>
+              <div className="summary-item"><span>Yıl Sayısı</span><strong>{commonTrend.byYear.length}</strong></div>
+              {commonTrend.earliestYear && <div className="summary-item"><span>İlk Yıl</span><strong>{commonTrend.earliestYear}</strong></div>}
+              {commonTrend.latestYear && <div className="summary-item"><span>Son Yıl</span><strong>{commonTrend.latestYear}</strong></div>}
+              {commonTrend.averagePerYear && <div className="summary-item"><span>Yıllık Ortalama</span><strong>{Math.round(commonTrend.averagePerYear).toLocaleString()}</strong></div>}
+              {commonTrend.peak && <div className="summary-item"><span>Zirve Yıl</span><strong>{commonTrend.peak.year} ({commonTrend.peak.count.toLocaleString()})</strong></div>}
             </div>
             <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
               {commonChartData && <Line data={commonChartData} options={chartOptions} />}
@@ -148,7 +148,7 @@ export default function App() {
           </div>
         )}
       </div>
-      <footer>Dataset loaded from local embedded CSV. Built with React + Vite + Chart.js.</footer>
+      <footer>Veri yerel gömülü CSV'den yüklendi. React + Vite + Chart.js ile oluşturuldu.</footer>
     </div>
   );
 }
