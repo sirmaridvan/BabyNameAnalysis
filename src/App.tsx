@@ -11,7 +11,7 @@ import {
   Legend,
   Title
 } from 'chart.js';
-import { getNameTrend, loadData } from './dataLoader';
+import { getNameTrend, loadData, getCommonNameTrend } from './dataLoader';
 import type { NameTrendResult } from './types';
 
 function conformsMajorVowelHarmony(str: string): boolean {
@@ -44,6 +44,7 @@ interface SearchState { name: string; gender: string; country: string; }
 export default function App() {
   const [query, setQuery] = useState<SearchState>({ name: '', gender: 'all', country: 'all' });
   const [trend, setTrend] = useState<NameTrendResult | null>(null);
+  const [commonTrend, setCommonTrend] = useState<NameTrendResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dataReady, setDataReady] = useState(false);
@@ -57,13 +58,29 @@ export default function App() {
     e.preventDefault();
     if (!query.name) return;
     setError(null); setLoading(true); setSearched(true);
-    try { setTrend(await getNameTrend(query.name)); } catch (err: any) { setError(err.message || 'Failed to search'); } finally { setLoading(false); }
+    try {
+      const [t, c] = await Promise.all([
+        getNameTrend(query.name),
+        getCommonNameTrend(query.name)
+      ]);
+      setTrend(t);
+      setCommonTrend(c);
+    } catch (err: any) {
+      setError(err.message || 'Failed to search');
+    } finally { setLoading(false); }
   }
 
   const chartData = trend ? {
     labels: trend.byYear.map(p => p.year),
     datasets: [
       { label: `${trend.name} usage`, data: trend.byYear.map(p => p.count), tension: 0.3, fill: true, backgroundColor: 'rgba(99,102,241,0.18)', borderColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#6366f1', pointBorderWidth: 0 }
+    ]
+  } : undefined;
+
+  const commonChartData = commonTrend ? {
+    labels: commonTrend.byYear.map(p => p.year),
+    datasets: [
+      { label: `${commonTrend.name} common usage`, data: commonTrend.byYear.map(p => p.count), tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.18)', borderColor: '#10b981', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#10b981', pointBorderWidth: 0 }
     ]
   } : undefined;
 
@@ -88,7 +105,7 @@ export default function App() {
           <div className="card" style={{overflow:'hidden'}}>
             <h2 style={{margin:'0 0 0.9rem', fontSize:'1.05rem', letterSpacing:'-0.3px'}}>Kurallar</h2>
             <div className="checklist">
-              {[{ label: 'Son 7 yılda en çok tercih edilen isimler arasında', ok: !!trend }, { label: 'Büyük ünlü uyumuna uygun', ok: conformsMajorVowelHarmony(query.name) }, { label: 'Küçük ünlü uyumuna uygun', ok: conformsMinorVowelHarmony(query.name) }, { label: 'Türkçe karakter içeriyor', ok: hasTurkishChars(query.name) }]
+              {[{ label: 'Son 7 yılda en çok tercih edilen isimler arasında', ok: !!trend }, { label: 'Son 7 yıldaki en yaygın isimler arasında', ok: !!commonTrend }, { label: 'Büyük ünlü uyumuna uygun', ok: conformsMajorVowelHarmony(query.name) }, { label: 'Küçük ünlü uyumuna uygun', ok: conformsMinorVowelHarmony(query.name) }, { label: 'Türkçe karakter içeriyor', ok: hasTurkishChars(query.name) }]
                 .map(r => (
                   <div key={r.label} className={`check-item ${r.ok ? 'ok' : 'fail'}`}>
                     <span className="check-icon" aria-hidden>{r.ok ? '✅' : '❌'}</span>
@@ -111,6 +128,22 @@ export default function App() {
             </div>
             <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
               {chartData && <Line data={chartData} options={chartOptions} />}
+            </div>
+          </div>
+        )}
+        {searched && commonTrend && (
+          <div className="card">
+            <h2 style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>{commonTrend.name} Common Usage</h2>
+            <div className="summary-grid">
+              <div className="summary-item"><span>Total</span><strong>{commonTrend.total.toLocaleString()}</strong></div>
+              <div className="summary-item"><span>Years Tracked</span><strong>{commonTrend.byYear.length}</strong></div>
+              {commonTrend.earliestYear && <div className="summary-item"><span>Earliest Year</span><strong>{commonTrend.earliestYear}</strong></div>}
+              {commonTrend.latestYear && <div className="summary-item"><span>Latest Year</span><strong>{commonTrend.latestYear}</strong></div>}
+              {commonTrend.averagePerYear && <div className="summary-item"><span>Avg / Year</span><strong>{Math.round(commonTrend.averagePerYear).toLocaleString()}</strong></div>}
+              {commonTrend.peak && <div className="summary-item"><span>Peak Year</span><strong>{commonTrend.peak.year} ({commonTrend.peak.count.toLocaleString()})</strong></div>}
+            </div>
+            <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
+              {commonChartData && <Line data={commonChartData} options={chartOptions} />}
             </div>
           </div>
         )}
