@@ -56,24 +56,37 @@ export default function App() {
   const [aiRaw, setAiRaw] = useState<string | null>(null); // preserve raw text for copy
 
   function formatAIResult(txt: string): string {
-    // Escape HTML
-    const escape = (s: string) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
-    let safe = escape(txt.trim());
-    // Bold **...**
-    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    // Split into paragraphs
-    const lines = safe.split(/\n+/);
-    const listItems: string[] = [];
-    const blocks: string[] = [];
-    const flushList = () => { if (listItems.length) { blocks.push(`<ol class="ai-list">${listItems.join('')}</ol>`); listItems.length = 0; } };
-    for (const l of lines) {
-      const m = l.match(/^(\d+)\.\s+(.*)/);
-      if (m) { listItems.push(`<li><span class="ai-step-index">${m[1]}.</span> <span>${m[2]}</span></li>`); }
-      else if (l.trim() === '') { flushList(); }
-      else { flushList(); blocks.push(`<p>${l}</p>`); }
+    const escape = (s: string) => s.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
+    const safeLines = txt.split(/\n+/).map(l => l.trim()).filter(l => l.length);
+    interface Section { title: string; body: string[]; }
+    const sections: Section[] = [];
+    let current: Section | null = null;
+    const clean = (s: string) => s.replace(/^[:\s]+/, '').replace(/^[-–]\s*/, '');
+    for (const rawLine of safeLines) {
+      const line = clean(rawLine);
+      const m = line.match(/^\d+\.\s*(\*\*.*?\*\*|[^:]{3,})/);
+      if (m) {
+        if (current) sections.push(current);
+        let raw = m[1].trim();
+        raw = raw.replace(/^[*:>\s]+/, '').replace(/\*\*/g,'');
+        raw = clean(raw);
+        current = { title: raw, body: [] };
+        const remainder = line.replace(/^\d+\.\s*/, '').replace(m[1], '').trim();
+        if (remainder) current.body.push(clean(remainder));
+      } else if (current) {
+        current.body.push(clean(line));
+      } else {
+        current = { title: 'Genel', body: [clean(line)] };
+      }
     }
-    flushList();
-    return blocks.join('');
+    if (current) sections.push(current);
+    if (!sections.length) return `<p>${escape(clean(txt))}</p>`;
+    const html = sections.map(sec => {
+      const title = escape(clean(sec.title));
+      const bodyHtml = sec.body.map(p => `<p>${escape(clean(p))}</p>`).join('');
+      return `<div class="ai-section"><div class="ai-section-title">${title}</div><div class="ai-section-body">${bodyHtml}</div></div>`;
+    }).join('');
+    return html;
   }
 
   useEffect(() => {

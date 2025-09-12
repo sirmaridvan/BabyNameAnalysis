@@ -43,4 +43,8 @@ button.subtle:hover { background:#334155; }
 .ai-list li + li { margin-top:0.2rem; }
 .ai-step-index { font-weight:600; color:#818cf8; margin-right:0.3rem; }
 .ai-footer-note { margin-top:0.9rem; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); opacity:0.7; }
+.ai-section { margin-bottom:1rem; }
+.ai-section-title { font-size:0.95rem; font-weight:700; letter-spacing:0.4px; margin-bottom:0.35rem; color:#fff; }
+.ai-section-body p { margin:0 0 0.4rem; font-size:0.8rem; line-height:1.45; }
+.ai-section:last-child { margin-bottom:0.4rem; }
 @media (max-width:640px){ .ai-header { flex-direction:column; align-items:flex-start; } .ai-header-actions { width:100%; } }
