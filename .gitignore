@@ -1,1 +1,56 @@
-node_modules
+# Dependencies
+node_modules/
+
+# Builds / output
+.dist/
+dist/
+build/
+.next/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / Cache
+.vite/
+.cache/
+.esbuild/
+parcel-cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs / reports
+report.*.json
+lint-staged.config.*
+
+# Misc
+*.swp
+*.swo
+*.orig
+
+# Coverage
+coverage/
+
+# Optional lockfiles (uncomment to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
