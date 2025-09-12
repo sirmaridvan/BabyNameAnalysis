@@ -12,6 +12,7 @@ import {
   Title
 } from 'chart.js';
 import { getNameTrend, loadData, getCommonNameTrend } from './dataLoader';
+import { analyzeNameWithAI } from './azureAI';
 import type { NameTrendResult } from './types';
 
 function conformsMajorVowelHarmony(str: string): boolean {
@@ -49,6 +50,31 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [searched, setSearched] = useState(false); // new flag
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiRaw, setAiRaw] = useState<string | null>(null); // preserve raw text for copy
+
+  function formatAIResult(txt: string): string {
+    // Escape HTML
+    const escape = (s: string) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
+    let safe = escape(txt.trim());
+    // Bold **...**
+    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Split into paragraphs
+    const lines = safe.split(/\n+/);
+    const listItems: string[] = [];
+    const blocks: string[] = [];
+    const flushList = () => { if (listItems.length) { blocks.push(`<ol class="ai-list">${listItems.join('')}</ol>`); listItems.length = 0; } };
+    for (const l of lines) {
+      const m = l.match(/^(\d+)\.\s+(.*)/);
+      if (m) { listItems.push(`<li><span class="ai-step-index">${m[1]}.</span> <span>${m[2]}</span></li>`); }
+      else if (l.trim() === '') { flushList(); }
+      else { flushList(); blocks.push(`<p>${l}</p>`); }
+    }
+    flushList();
+    return blocks.join('');
+  }
 
   useEffect(() => {
     loadData().then(() => setDataReady(true)).catch(e => setError(e.message));
@@ -68,6 +94,18 @@ export default function App() {
     } catch (err: any) {
       setError(err.message || 'Failed to search');
     } finally { setLoading(false); }
+  }
+
+  async function handleAIAnalyze() {
+    if (!query.name) return;
+    setAiError(null); setAiLoading(true); setAiResult(null); setAiRaw(null);
+    try {
+      const res = await analyzeNameWithAI(query.name);
+      setAiRaw(res);
+      setAiResult(formatAIResult(res));
+    } catch (e: any) {
+      setAiError(e.message || 'Yapay Zeka analizi başarısız');
+    } finally { setAiLoading(false); }
   }
 
   const chartData = trend ? {
@@ -96,6 +134,7 @@ export default function App() {
             <input id="name" placeholder="örn. Mehmet" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
           </div>
           <button type="submit" disabled={!query.name || loading}>{loading ? 'Analiz Ediliyor…' : 'Analiz Et'}</button>
+          <button type="button" style={{background:'#0d9488'}} disabled={!query.name || aiLoading} onClick={handleAIAnalyze}>{aiLoading ? 'Yapay Zeka Analizi…' : 'Yapay Zeka Açıklaması'}</button>
         </form>
         {!dataReady && !error && <div className="loading" style={{marginTop:'0.75rem', fontSize:'0.8rem'}}>Veri yükleniyor…</div>}
         {error && <div className="alert" style={{marginTop:'0.75rem'}}>{error}</div>}
@@ -114,6 +153,21 @@ export default function App() {
                 ))}
             </div>
           </div>
+        )}
+        {aiResult && (
+          <div className="card ai-card">
+            <div className="ai-header">
+              <h2>Yapay Zeka Analizi</h2>
+              <div className="ai-header-actions">
+                <button type="button" className="subtle" onClick={() => { if (aiRaw) { navigator.clipboard.writeText(aiRaw); } }} title="Metni kopyala">Kopyala</button>
+              </div>
+            </div>
+            <div className="ai-body" dangerouslySetInnerHTML={{__html: aiResult}} />
+            <div className="ai-footer-note">Otomatik oluşturulmuştur. Dini referansları doğrulamanız önerilir.</div>
+          </div>
+        )}
+        {aiError && (
+          <div className="card alert" style={{background:'rgba(239,68,68,0.1)'}}>{aiError}</div>
         )}
         {searched && trend && (
           <div className="card">
