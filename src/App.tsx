@@ -11,13 +11,31 @@ import {
   Legend,
   Title
 } from 'chart.js';
-import { getNameTrend, loadData, listAllNames } from './dataLoader';
+import { getNameTrend, loadData } from './dataLoader';
 import type { NameTrendResult } from './types';
 
-// Turkish vowel checker
-function hasTurkishVowel(str: string): boolean {
-  return /[aeıioöuü]/i.test(str.toLowerCase());
+function conformsMajorVowelHarmony(str: string): boolean {
+  const chars = str.toLowerCase().split('');
+  const vowels = chars.filter(c => 'aeıioöuü'.includes(c));
+  if (vowels.length <= 1) return true; // trivially true
+  const front = new Set(['e','i','ö','ü']);
+  const firstIsFront = front.has(vowels[0]);
+  return vowels.every(v => front.has(v) === firstIsFront);
 }
+function conformsMinorVowelHarmony(str: string): boolean {
+  const s = str.toLowerCase();
+  const vowels = [...s].filter(c => 'aeıioöuü'.includes(c));
+  if (vowels.length <= 1) return true;
+  const rounded = new Set(['o','ö','u','ü']);
+  const allowedAfterRounded = new Set(['a','e','u','ü']);
+  for (let i = 1; i < vowels.length; i++) {
+    const prev = vowels[i-1];
+    const cur = vowels[i];
+    if (rounded.has(prev) && !allowedAfterRounded.has(cur)) return false;
+  }
+  return true;
+}
+function hasTurkishChars(str: string): boolean { return /[ğüşöçıİ]/i.test(str); }
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Filler, Legend, Title);
 
@@ -29,33 +47,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dataReady, setDataReady] = useState(false);
-  const [allNames, setAllNames] = useState<string[]>([]);
+  const [searched, setSearched] = useState(false); // new flag
 
   useEffect(() => {
-    loadData()
-      .then(() => listAllNames())
-      .then(names => { setAllNames(names); setDataReady(true); })
-      .catch(e => setError(e.message));
+    loadData().then(() => setDataReady(true)).catch(e => setError(e.message));
   }, []);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!query.name) return;
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await getNameTrend(query.name);
-      setTrend(res);
-    } catch (err: any) {
-      setError(err.message || 'Failed to search');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const val = e.target.value;
-    setQuery(q => ({ ...q, name: val }));
+    setError(null); setLoading(true); setSearched(true);
+    try { setTrend(await getNameTrend(query.name)); } catch (err: any) { setError(err.message || 'Failed to search'); } finally { setLoading(false); }
   }
 
   const chartData = trend ? {
@@ -73,18 +75,8 @@ export default function App() {
       <div className="search-card">
         <form onSubmit={handleSearch}>
           <div className="field">
-            <label htmlFor="name">Name (type or select)</label>
-            <input id="name" list="names-list" placeholder="e.g. Emma" value={query.name} onChange={e => setQuery(q => ({ ...q, name: e.target.value }))} />
-            <datalist id="names-list">
-              {allNames.map(n => <option key={n} value={n} />)}
-            </datalist>
-          </div>
-          <div className="field">
-            <label htmlFor="nameSelect">Or pick from list</label>
-            <select id="nameSelect" value={query.name} onChange={handleSelectChange} disabled={!allNames.length}>
-              <option value="">-- Select a name --</option>
-              {allNames.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
+            <label htmlFor="name">Name</label>
+            <input id="name" placeholder="e.g. Emma" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
           </div>
           <button type="submit" disabled={!query.name || loading}>{loading ? 'Analyzing…' : 'Analyze'}</button>
         </form>
@@ -92,9 +84,21 @@ export default function App() {
         {error && <div className="alert" style={{marginTop:'0.75rem'}}>{error}</div>}
       </div>
       <div className="results">
-        {!trend && dataReady && !loading && !error && <div className="card empty">Select or enter a name then click Analyze.</div>}
-        {trend === null && query.name && !loading && dataReady && !error && <div className="card empty">No data found for name "{query.name}".</div>}
-        {trend && (
+        {searched && query.name && dataReady && !error && (
+          <div className="card" style={{overflow:'hidden'}}>
+            <h2 style={{margin:'0 0 0.9rem', fontSize:'1.05rem', letterSpacing:'-0.3px'}}>Kurallar</h2>
+            <div className="checklist">
+              {[{ label: 'Son 7 yılda en çok tercih edilen isimler arasında', ok: !!trend }, { label: 'Büyük ünlü uyumuna uygun', ok: conformsMajorVowelHarmony(query.name) }, { label: 'Küçük ünlü uyumuna uygun', ok: conformsMinorVowelHarmony(query.name) }, { label: 'Türkçe karakter içeriyor', ok: hasTurkishChars(query.name) }]
+                .map(r => (
+                  <div key={r.label} className={`check-item ${r.ok ? 'ok' : 'fail'}`}>
+                    <span className="check-icon" aria-hidden>{r.ok ? '✅' : '❌'}</span>
+                    <span>{r.label}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+        {searched && trend && (
           <div className="card">
             <h2 style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>{trend.name} Over Time</h2>
             <div className="summary-grid">
@@ -105,23 +109,6 @@ export default function App() {
               {trend.averagePerYear && <div className="summary-item"><span>Avg / Year</span><strong>{Math.round(trend.averagePerYear).toLocaleString()}</strong></div>}
               {trend.peak && <div className="summary-item"><span>Peak Year</span><strong>{trend.peak.year} ({trend.peak.count.toLocaleString()})</strong></div>}
             </div>
-            {/* Checklist rules */}
-            {query.name && (
-              <div className="checklist">
-                {(() => {
-                  const rules = [
-                    { label: 'Son 7 yılda en çok tercih edilen isimler arasında', ok: !!trend },
-                    { label: 'Ünlü harf içeriyor', ok: hasTurkishVowel(query.name) }
-                  ];
-                  return rules.map(r => (
-                    <div key={r.label} className={`check-item ${r.ok ? 'ok' : 'fail'}`}>
-                      <span className="check-icon" aria-hidden>{r.ok ? '✅' : '❌'}</span>
-                      <span>{r.label}</span>
-                    </div>
-                  ));
-                })()}
-              </div>
-            )}
             <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
               {chartData && <Line data={chartData} options={chartOptions} />}
             </div>
