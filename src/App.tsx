@@ -14,6 +14,9 @@ import {
 import { getNameTrend, loadData, getCommonNameTrend } from './dataLoader';
 import { analyzeNameWithAI } from './azureAI';
 import type { NameTrendResult } from './types';
+import WelcomeBanner from './components/parents/WelcomeBanner';
+import DailyTip from './components/parents/DailyTip';
+import MilestoneTracker from './components/parents/MilestoneTracker';
 
 function conformsMajorVowelHarmony(str: string): boolean {
   const chars = str.toLowerCase().split('');
@@ -138,82 +141,90 @@ export default function App() {
   const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#f1f5f9' } }, title: { display: false }, tooltip: { mode: 'index' as const, intersect: false } }, interaction: { mode: 'index' as const, intersect: false }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } } } };
 
   return (
-    <div className="container">
-      <header>
-        <h1>İsim Trend Analizi</h1>
+    <div className="container compassionate-theme">
+      {/* Emotional supportive introduction */}
+      <WelcomeBanner />
+      <header className="app-header-soft">
+        <h1 className="sr-only">İsim Trend Analizi Uygulaması</h1>
       </header>
-      <main id="main" role="main">
-        <div className="search-card" role="search">
-          <form onSubmit={handleSearch} aria-label="İsim arama formu">
-            <div className="field">
-              <label htmlFor="name">İsim</label>
-              <input id="name" placeholder="örn. Mehmet" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
-            </div>
-            <button type="submit" disabled={!query.name || loading} aria-busy={loading}>{loading ? 'Analiz Ediliyor…' : 'Analiz Et'}</button>
-            <button type="button" style={{background:'#0d9488'}} disabled={!query.name || aiLoading} onClick={handleAIAnalyze}>{aiLoading ? 'Yapay Zeka Analizi…' : 'Yapay Zeka Açıklaması'}</button>
-          </form>
-          {!dataReady && !error && <div className="loading" style={{marginTop:'0.75rem', fontSize:'0.8rem'}} role="status" aria-live="polite">Veri yükleniyor…</div>}
-          {error && <div className="alert" style={{marginTop:'0.75rem'}} role="alert">{error}</div>}
+      <main id="main" role="main" className="layout-grid-responsive">
+        <div className="primary-column" aria-label="Arama ve sonuç alanı">
+          <div className="search-card elevate-soft" role="search">
+            <form onSubmit={handleSearch} aria-label="İsim arama formu">
+              <div className="field">
+                <label htmlFor="name">İsim</label>
+                <input id="name" placeholder="örn. Mehmet" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
+              </div>
+              <button type="submit" disabled={!query.name || loading} aria-busy={loading}>{loading ? 'Analiz Ediliyor…' : 'Analiz Et'}</button>
+              <button type="button" style={{background:'#0d9488'}} disabled={!query.name || aiLoading} onClick={handleAIAnalyze}>{aiLoading ? 'Yapay Zeka Analizi…' : 'Yapay Zeka Açıklaması'}</button>
+            </form>
+            {!dataReady && !error && <div className="loading" style={{marginTop:'0.75rem', fontSize:'0.8rem'}} role="status" aria-live="polite">Veri yükleniyor…</div>}
+            {error && <div className="alert" style={{marginTop:'0.75rem'}} role="alert">{error}</div>}
+          </div>
+          <div className="results">
+            {searched && query.name && dataReady && !error && (
+              <section className="card" aria-labelledby="rules-heading" style={{overflow:'hidden'}}>
+                <h2 id="rules-heading" style={{margin:'0 0 0.9rem', fontSize:'1.05rem', letterSpacing:'-0.3px'}}>Kurallar</h2>
+                <div className="checklist" role="list">
+                  {[{ label: 'Son 7 yılda en çok tercih edilen isimler arasında', ok: !!trend }, { label: 'Son 7 yıldaki en yaygın isimler arasında', ok: !!commonTrend }, { label: 'Büyük ünlü uyumuna uygun', ok: conformsMajorVowelHarmony(query.name) }, { label: 'Küçük ünlü uyumuna uygun', ok: conformsMinorVowelHarmony(query.name) }, { label: 'Türkçe karakter içeriyor', ok: hasTurkishChars(query.name) }]
+                    .map(r => (
+                      <div key={r.label} className={`check-item ${r.ok ? 'ok' : 'fail'}`} role="listitem">
+                        <span className="check-icon" aria-hidden>{r.ok ? '✅' : '❌'}</span>
+                        <span>{r.label}</span>
+                        <span className="sr-only">{r.ok ? 'uygun' : 'uygun değil'}</span>
+                      </div>
+                    ))}
+                </div>
+              </section>
+            )}
+            {aiResult && (
+              <section className="card ai-card" aria-labelledby="ai-heading" style={{whiteSpace:'pre-wrap'}}>
+                <h2 id="ai-heading" style={{margin:'0 0 0.8rem', fontSize:'1.05rem'}}>Dilsel / Kültürel Analiz (Yapay Zeka)</h2>
+                <div className="ai-body" role="status" aria-live="polite" dangerouslySetInnerHTML={{__html: aiResult}} />
+                <div className="ai-footer-note">Otomatik oluşturulmuştur. Dini referansları doğrulamanız önerilir.</div>
+              </section>
+            )}
+            {aiError && (
+              <div className="card alert" style={{background:'rgba(239,68,68,0.1)'}} role="alert">{aiError}</div>
+            )}
+            {searched && trend && (
+              <section className="card" aria-labelledby="trend-heading">
+                <h2 id="trend-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>{trend.name} Yıllara Göre</h2>
+                <div className="summary-grid" role="table" aria-label="Yıllara göre kullanım özeti">
+                  <div className="summary-item" role="row"><span role="rowheader">Toplam</span><strong role="cell">{trend.total.toLocaleString()}</strong></div>
+                  <div className="summary-item" role="row"><span role="rowheader">Yıl Sayısı</span><strong role="cell">{trend.byYear.length}</strong></div>
+                  {trend.earliestYear && <div className="summary-item" role="row"><span role="rowheader">İlk Yıl</span><strong role="cell">{trend.earliestYear}</strong></div>}
+                  {trend.latestYear && <div className="summary-item" role="row"><span role="rowheader">Son Yıl</span><strong role="cell">{trend.latestYear}</strong></div>}
+                  {trend.averagePerYear && <div className="summary-item" role="row"><span role="rowheader">Yıllık Ortalama</span><strong role="cell">{Math.round(trend.averagePerYear).toLocaleString()}</strong></div>}
+                  {trend.peak && <div className="summary-item" role="row"><span role="rowheader">Zirve Yıl</span><strong role="cell">{trend.peak.year} ({trend.peak.count.toLocaleString()})</strong></div>}
+                </div>
+                <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
+                  {chartData && <Line data={chartData} options={chartOptions} aria-label="İsim kullanım trend grafiği" role="img" />}
+                </div>
+              </section>
+            )}
+            {searched && commonTrend && (
+              <section className="card" aria-labelledby="common-heading">
+                <h2 id="common-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>{commonTrend.name} Yaygın Kullanım</h2>
+                <div className="summary-grid" role="table" aria-label="Yaygın kullanım özeti">
+                  <div className="summary-item" role="row"><span role="rowheader">Toplam</span><strong role="cell">{commonTrend.total.toLocaleString()}</strong></div>
+                  <div className="summary-item" role="row"><span role="rowheader">Yıl Sayısı</span><strong role="cell">{commonTrend.byYear.length}</strong></div>
+                  {commonTrend.earliestYear && <div className="summary-item" role="row"><span role="rowheader">İlk Yıl</span><strong role="cell">{commonTrend.earliestYear}</strong></div>}
+                  {commonTrend.latestYear && <div className="summary-item" role="row"><span role="rowheader">Son Yıl</span><strong role="cell">{commonTrend.latestYear}</strong></div>}
+                  {commonTrend.averagePerYear && <div className="summary-item" role="row"><span role="rowheader">Yıllık Ortalama</span><strong role="cell">{Math.round(commonTrend.averagePerYear).toLocaleString()}</strong></div>}
+                  {commonTrend.peak && <div className="summary-item" role="row"><span role="rowheader">Zirve Yıl</span><strong role="cell">{commonTrend.peak.year} ({commonTrend.peak.count.toLocaleString()})</strong></div>}
+                </div>
+                <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
+                  {commonChartData && <Line data={commonChartData} options={chartOptions} aria-label="Yaygın isim kullanım trend grafiği" role="img" />}
+                </div>
+              </section>
+            )}
+          </div>
         </div>
-        <div className="results">
-          {searched && query.name && dataReady && !error && (
-            <section className="card" aria-labelledby="rules-heading" style={{overflow:'hidden'}}>
-              <h2 id="rules-heading" style={{margin:'0 0 0.9rem', fontSize:'1.05rem', letterSpacing:'-0.3px'}}>Kurallar</h2>
-              <div className="checklist" role="list">
-                {[{ label: 'Son 7 yılda en çok tercih edilen isimler arasında', ok: !!trend }, { label: 'Son 7 yıldaki en yaygın isimler arasında', ok: !!commonTrend }, { label: 'Büyük ünlü uyumuna uygun', ok: conformsMajorVowelHarmony(query.name) }, { label: 'Küçük ünlü uyumuna uygun', ok: conformsMinorVowelHarmony(query.name) }, { label: 'Türkçe karakter içeriyor', ok: hasTurkishChars(query.name) }]
-                  .map(r => (
-                    <div key={r.label} className={`check-item ${r.ok ? 'ok' : 'fail'}`} role="listitem">
-                      <span className="check-icon" aria-hidden>{r.ok ? '✅' : '❌'}</span>
-                      <span>{r.label}</span>
-                      <span className="sr-only">{r.ok ? 'uygun' : 'uygun değil'}</span>
-                    </div>
-                  ))}
-              </div>
-            </section>
-          )}
-          {aiResult && (
-            <section className="card ai-card" aria-labelledby="ai-heading" style={{whiteSpace:'pre-wrap'}}>
-              <h2 id="ai-heading" style={{margin:'0 0 0.8rem', fontSize:'1.05rem'}}>Dilsel / Kültürel Analiz (Yapay Zeka)</h2>
-              <div className="ai-body" role="status" aria-live="polite" dangerouslySetInnerHTML={{__html: aiResult}} />
-              <div className="ai-footer-note">Otomatik oluşturulmuştur. Dini referansları doğrulamanız önerilir.</div>
-            </section>
-          )}
-          {aiError && (
-            <div className="card alert" style={{background:'rgba(239,68,68,0.1)'}} role="alert">{aiError}</div>
-          )}
-          {searched && trend && (
-            <section className="card" aria-labelledby="trend-heading">
-              <h2 id="trend-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>{trend.name} Yıllara Göre</h2>
-              <div className="summary-grid" role="table" aria-label="Yıllara göre kullanım özeti">
-                <div className="summary-item" role="row"><span role="rowheader">Toplam</span><strong role="cell">{trend.total.toLocaleString()}</strong></div>
-                <div className="summary-item" role="row"><span role="rowheader">Yıl Sayısı</span><strong role="cell">{trend.byYear.length}</strong></div>
-                {trend.earliestYear && <div className="summary-item" role="row"><span role="rowheader">İlk Yıl</span><strong role="cell">{trend.earliestYear}</strong></div>}
-                {trend.latestYear && <div className="summary-item" role="row"><span role="rowheader">Son Yıl</span><strong role="cell">{trend.latestYear}</strong></div>}
-                {trend.averagePerYear && <div className="summary-item" role="row"><span role="rowheader">Yıllık Ortalama</span><strong role="cell">{Math.round(trend.averagePerYear).toLocaleString()}</strong></div>}
-                {trend.peak && <div className="summary-item" role="row"><span role="rowheader">Zirve Yıl</span><strong role="cell">{trend.peak.year} ({trend.peak.count.toLocaleString()})</strong></div>}
-              </div>
-              <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
-                {chartData && <Line data={chartData} options={chartOptions} aria-label="İsim kullanım trend grafiği" role="img" />}
-              </div>
-            </section>
-          )}
-          {searched && commonTrend && (
-            <section className="card" aria-labelledby="common-heading">
-              <h2 id="common-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>{commonTrend.name} Yaygın Kullanım</h2>
-              <div className="summary-grid" role="table" aria-label="Yaygın kullanım özeti">
-                <div className="summary-item" role="row"><span role="rowheader">Toplam</span><strong role="cell">{commonTrend.total.toLocaleString()}</strong></div>
-                <div className="summary-item" role="row"><span role="rowheader">Yıl Sayısı</span><strong role="cell">{commonTrend.byYear.length}</strong></div>
-                {commonTrend.earliestYear && <div className="summary-item" role="row"><span role="rowheader">İlk Yıl</span><strong role="cell">{commonTrend.earliestYear}</strong></div>}
-                {commonTrend.latestYear && <div className="summary-item" role="row"><span role="rowheader">Son Yıl</span><strong role="cell">{commonTrend.latestYear}</strong></div>}
-                {commonTrend.averagePerYear && <div className="summary-item" role="row"><span role="rowheader">Yıllık Ortalama</span><strong role="cell">{Math.round(commonTrend.averagePerYear).toLocaleString()}</strong></div>}
-                {commonTrend.peak && <div className="summary-item" role="row"><span role="rowheader">Zirve Yıl</span><strong role="cell">{commonTrend.peak.year} ({commonTrend.peak.count.toLocaleString()})</strong></div>}
-              </div>
-              <div className="chart-wrapper" style={{marginTop:'1.4rem'}}>
-                {commonChartData && <Line data={commonChartData} options={chartOptions} aria-label="Yaygın isim kullanım trend grafiği" role="img" />}
-              </div>
-            </section>
-          )}
-        </div>
+        <aside className="supporting-column" aria-label="Destekleyici rehberlik">
+          <DailyTip />
+          <MilestoneTracker />
+        </aside>
       </main>
       <footer>Veri yerel gömülü CSV'den yüklendi. React + Vite + Chart.js ile oluşturuldu.</footer>
     </div>
