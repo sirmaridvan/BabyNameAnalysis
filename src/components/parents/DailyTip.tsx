@@ -11,14 +11,13 @@ const defaultTips: DailyTipData[] = [
 interface DailyTipProps { tips?: DailyTipData[]; }
 
 const DailyTip: React.FC<DailyTipProps> = ({ tips = defaultTips }) => {
-  const [index, setIndex] = React.useState(0);
-  function next() { setIndex(i => (i + 1) % tips.length); }
+  // Random initial index only (changes only when page is reloaded)
+  const [index] = React.useState(() => Math.floor(Math.random() * tips.length));
   const tip = tips[index];
   return (
     <aside className="daily-tip card elevate-soft" aria-live="polite" aria-label="Günlük nazik ipucu">
       <div className="tip-header">
         <strong className="tip-title">{tip.title}</strong>
-        <button type="button" onClick={next} className="tip-next" aria-label="Sonraki ipucu" title="Sonraki ipucu">↺</button>
       </div>
       <p className="tip-body">{tip.body}</p>
     </aside>

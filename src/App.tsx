@@ -17,6 +17,7 @@ import type { NameTrendResult } from './types';
 import WelcomeBanner from './components/parents/WelcomeBanner';
 import DailyTip from './components/parents/DailyTip';
 import MilestoneTracker from './components/parents/MilestoneTracker';
+import Logo from './components/Logo';
 
 function conformsMajorVowelHarmony(str: string): boolean {
   const chars = str.toLowerCase().split('');
@@ -142,6 +143,9 @@ export default function App() {
 
   return (
     <div className="container compassionate-theme">
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem'}}>
+        <Logo size={44} />
+      </div>
       {/* Emotional supportive introduction */}
       <WelcomeBanner />
       <header className="app-header-soft">
