@@ -100,7 +100,15 @@ export default function App() {
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!query.name) return;
-    setError(null); setLoading(true); setSearched(true);
+    // Clear previous results before fetching new analysis
+    setTrend(null);
+    setCommonTrend(null);
+    setAiResult(null);
+    setAiError(null);
+    setAiRaw(null);
+    setError(null);
+    setSearched(false);
+    setLoading(true);
     try {
       const [t, c] = await Promise.all([
         getNameTrend(query.name),
@@ -108,6 +116,7 @@ export default function App() {
       ]);
       setTrend(t);
       setCommonTrend(c);
+      setSearched(true);
     } catch (err: any) {
       setError(err.message || 'Failed to search');
     } finally { setLoading(false); }
@@ -115,7 +124,14 @@ export default function App() {
 
   async function handleAIAnalyze() {
     if (!query.name) return;
-    setAiError(null); setAiLoading(true); setAiResult(null); setAiRaw(null);
+    // Clear existing rules & charts before AI analysis
+    setTrend(null);
+    setCommonTrend(null);
+    setSearched(false);
+    setAiError(null);
+    setAiLoading(true);
+    setAiResult(null);
+    setAiRaw(null);
     try {
       const res = await analyzeNameWithAI(query.name);
       setAiRaw(res);
@@ -141,8 +157,11 @@ export default function App() {
 
   const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#f1f5f9' } }, title: { display: false }, tooltip: { mode: 'index' as const, intersect: false } }, interaction: { mode: 'index' as const, intersect: false }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.04)' } } } };
 
+  const showOverlay = (loading && !!query.name) || aiLoading; // dataset preload excluded
+  const overlayMessage = aiLoading ? 'Yapay Zeka Analizi Hazırlanıyor…' : 'Statik Analiz İşleniyor…';
+
   return (
-    <div className="container compassionate-theme">
+    <div className={`container compassionate-theme ${showOverlay ? 'loading-active' : ''}`}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem'}}>
         <Logo size={44} />
       </div>
@@ -151,7 +170,7 @@ export default function App() {
       <header className="app-header-soft">
         <h1 className="sr-only">İsim Trend Analizi Uygulaması</h1>
       </header>
-      <main id="main" role="main" className="layout-grid-responsive">
+      <main id="main" role="main" className="layout-grid-responsive" aria-busy={showOverlay || undefined}>
         <div className="primary-column" aria-label="Arama ve sonuç alanı">
           <div className="search-card elevate-soft" role="search">
             <form onSubmit={handleSearch} aria-label="İsim arama formu">
@@ -159,8 +178,8 @@ export default function App() {
                 <label htmlFor="name">İsim</label>
                 <input id="name" placeholder="örn. Mehmet" value={query.name} onChange={e => { const v = e.target.value; setQuery(q => ({ ...q, name: v })); setSearched(false); setTrend(null); }} />
               </div>
-              <button type="submit" disabled={!query.name || loading} aria-busy={loading}>{loading ? 'Analiz Ediliyor…' : 'Analiz Et'}</button>
-              <button type="button" style={{background:'#0d9488'}} disabled={!query.name || aiLoading} onClick={handleAIAnalyze}>{aiLoading ? 'Yapay Zeka Analizi…' : 'Yapay Zeka Açıklaması'}</button>
+              <button type="submit" disabled={!query.name || loading} aria-busy={loading}>{loading ? 'Statik Analiz…' : 'Statik Analiz'}</button>
+              <button type="button" style={{background:'#0d9488'}} disabled={!query.name || aiLoading} onClick={handleAIAnalyze}>{aiLoading ? 'Yapay Zeka Analizi…' : 'Yapay Zeka Analizi'}</button>
             </form>
             {!dataReady && !error && <div className="loading" style={{marginTop:'0.75rem', fontSize:'0.8rem'}} role="status" aria-live="polite">Veri yükleniyor…</div>}
             {error && <div className="alert" style={{marginTop:'0.75rem'}} role="alert">{error}</div>}
@@ -193,7 +212,7 @@ export default function App() {
             )}
             {searched && trend && (
               <section className="card" aria-labelledby="trend-heading">
-                <h2 id="trend-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>{trend.name} Yıllara Göre</h2>
+                <h2 id="trend-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px'}}>Son 7 yılda bebeklere verilen {trend.name} ismi</h2>
                 <div className="summary-grid" role="table" aria-label="Yıllara göre kullanım özeti">
                   <div className="summary-item" role="row"><span role="rowheader">Toplam</span><strong role="cell">{trend.total.toLocaleString()}</strong></div>
                   <div className="summary-item" role="row"><span role="rowheader">Yıl Sayısı</span><strong role="cell">{trend.byYear.length}</strong></div>
@@ -209,9 +228,8 @@ export default function App() {
             )}
             {searched && commonTrend && (
               <section className="card" aria-labelledby="common-heading">
-                <h2 id="common-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>{commonTrend.name} Yaygın Kullanım</h2>
+                <h2 id="common-heading" style={{margin:'0 0 1rem', fontSize:'1.3rem', letterSpacing:'-0.5px', color:'#10b981'}}>Son 7 yılda {commonTrend.name} isminin yaygın kullanımı</h2>
                 <div className="summary-grid" role="table" aria-label="Yaygın kullanım özeti">
-                  <div className="summary-item" role="row"><span role="rowheader">Toplam</span><strong role="cell">{commonTrend.total.toLocaleString()}</strong></div>
                   <div className="summary-item" role="row"><span role="rowheader">Yıl Sayısı</span><strong role="cell">{commonTrend.byYear.length}</strong></div>
                   {commonTrend.earliestYear && <div className="summary-item" role="row"><span role="rowheader">İlk Yıl</span><strong role="cell">{commonTrend.earliestYear}</strong></div>}
                   {commonTrend.latestYear && <div className="summary-item" role="row"><span role="rowheader">Son Yıl</span><strong role="cell">{commonTrend.latestYear}</strong></div>}
@@ -230,7 +248,18 @@ export default function App() {
           <MilestoneTracker />
         </aside>
       </main>
-      <footer>Veri yerel gömülü CSV'den yüklendi. React + Vite + Chart.js ile oluşturuldu.</footer>
+      {showOverlay && (
+        <div className="loading-screen" role="status" aria-live="assertive">
+          <div className="ls-inner" aria-label={overlayMessage}>
+            <div className="ls-visual" role="img" aria-label="Yükleniyor">
+              <div className="ls-ring" />
+              <div className="ls-pulse" />
+            </div>
+            <p className="ls-text">{overlayMessage}</p>
+            <p className="ls-sub">Lütfen bekleyin, veriler hazırlanıyor…</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
